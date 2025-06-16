@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # API Gateway Service
+  api_gateway:
+    build: ./backend/api_gateway/ # Указываем Docker Compose, где искать Dockerfile для сборки образа
+    container_name: api_gateway
+    ports:
+      - "5000:5000" # Пробрасываем порт 5000 из контейнера на порт 5000 хост-машины
+    environment:
+      FLASK_APP: app.py # Указываем Flask, какой файл запускать
+      FLASK_ENV: development # Режим разработки Flask (для отладки)
+    volumes:
+      - ./backend/api_gateway:/app # Монтируем локальную папку с кодом в контейнер для hot-reloading (удобно при разработке)
+    depends_on: # Указываем, что api-gateway зависит от других сервисов
+      - mongodb
+      - kafka
+    restart: unless-stopped
+
+  # MongoDB Service
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+  # Zookeeper Service (Required by Kafka)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    restart: unless-stopped
+
+  # Kafka Service
+  kafka:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: kafka
+    ports:
+      - "9092:29092" # <-- ИЗМЕНЕНО: Хост-порт 9092 будет связан с ВНЕШНИМ слушателем Kafka на порту 29092 внутри контейнера
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9092 # <-- ИЗМЕНЕНО
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT # <-- ИЗМЕНЕНО
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL # <-- ИЗМЕНЕНО
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      #KAFKA_PROCESS_ROLES: broker
+      CLUSTER_ID: 'kafka-cluster-1'
+    depends_on:
+      - zookeeper
+    restart: unless-stopped
+
+# Docker Volumes (для сохранения данных)
+volumes:
+  mongodb_data:
