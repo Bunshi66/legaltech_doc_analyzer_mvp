@@ -50,4 +50,4 @@
 - Вячеслав (Project Manager, Backend Lead, Solutions Architect, ML Engineer, DevOps)
 - Елисей (Frontend Developer)
 - Максим (Backend Developer)
-- Георгий (Творческий вдохновитель и просто хороший парень)
+- Георгий (Creative inspiration and just a good guy)
